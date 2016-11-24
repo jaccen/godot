@@ -42,9 +42,9 @@ struct ParamHint {
 	PropertyHint hint;
 	String hint_text;
 	Variant default_val;
-	
+
 	ParamHint(const String& p_name="", PropertyHint p_hint=PROPERTY_HINT_NONE, const String& p_hint_text="",Variant p_default_val=Variant()) {
-	
+
 		name=p_name;
 		hint=p_hint;
 		hint_text=p_hint_text;
@@ -73,9 +73,9 @@ struct MethodDefinition {
 
 	StringName name;
 	Vector<StringName> args;
-	MethodDefinition() {}	
+	MethodDefinition() {}
 	MethodDefinition(const char *p_name) { name=p_name; }
-	MethodDefinition(const StringName& p_name) { name=p_name; }	
+	MethodDefinition(const StringName& p_name) { name=p_name; }
 };
 
 
@@ -109,7 +109,13 @@ static _FORCE_INLINE_ const char* _MD(const char* m_name, ...) { return m_name; 
 #endif
 
 class ObjectTypeDB {
-	
+public:
+	enum APIType {
+		API_CORE,
+		API_EDITOR,
+		API_NONE
+	};
+public:
 	struct PropertySetGet {
 
 		int index;
@@ -121,7 +127,8 @@ class ObjectTypeDB {
 	};
 
 	struct TypeInfo {
-		
+
+		APIType api;
 		TypeInfo *inherits_ptr;
 		HashMap<StringName,MethodBind*,StringNameHasher> method_map;
 		HashMap<StringName,int,StringNameHasher> constant_map;
@@ -143,12 +150,12 @@ class ObjectTypeDB {
 		TypeInfo();
 		~TypeInfo();
 	};
-	
+
 	template<class T>
 	static Object *creator() {
 		return memnew( T );
 	}
-	
+
 	static Mutex *lock;
 	static HashMap<StringName,TypeInfo,StringNameHasher> types;
 	static HashMap<StringName,StringName,StringNameHasher> resource_base_extensions;
@@ -161,10 +168,11 @@ class ObjectTypeDB {
 #endif
 
 
+	static APIType current_api;
 
 	static void _add_type2(const StringName& p_type, const StringName& p_inherits);
-public:	
-	
+public:
+
 	// DO NOT USE THIS!!!!!! NEEDS TO BE PUBLIC BUT DO NOT USE NO MATTER WHAT!!!
 	template<class T>
 	static void _add_type() {
@@ -195,7 +203,7 @@ public:
 
 	template<class T>
 	static void register_type() {
-		
+
 		GLOBAL_LOCK_FUNCTION;
 		T::initialize_type();
 		TypeInfo *t=types.getptr(T::get_type_static());
@@ -206,7 +214,7 @@ public:
 
 	template<class T>
 	static void register_virtual_type() {
-		
+
 		GLOBAL_LOCK_FUNCTION;
 		T::initialize_type();
 		//nothing
@@ -236,6 +244,9 @@ public:
 	static bool is_type(const StringName &p_type,const StringName& p_inherits);
 	static bool can_instance(const StringName &p_type);
 	static Object *instance(const StringName &p_type);
+	static APIType get_api_type(const StringName &p_type);
+
+	static uint64_t get_api_hash(APIType p_api);
 
 #if 0
 	template<class N, class M>
@@ -247,9 +258,9 @@ public:
 		ParamDef d4=ParamDef(),
 		ParamDef d5=ParamDef()
 		) {
-		
+
 		return bind_methodf(METHOD_FLAGS_DEFAULT,p_method_name, p_method, d1,d2,d3,d4,d5);
-	}	
+	}
 
 
 
@@ -415,14 +426,21 @@ public:
 
 #endif
 	template<class M>
-	static MethodBind* bind_native_method(uint32_t p_flags, const StringName& p_name, M p_method,const MethodInfo& p_info=MethodInfo(),const Vector<Variant>& p_default_args=Vector<Variant>()) {
+	static MethodBind* bind_vararg_method(uint32_t p_flags, StringName p_name, M p_method,const MethodInfo& p_info=MethodInfo(),const Vector<Variant>& p_default_args=Vector<Variant>()) {
 
 		GLOBAL_LOCK_FUNCTION;
 
 
 
-		MethodBind *bind = create_native_method_bind(p_method,p_info);
+		MethodBind *bind = create_vararg_method_bind(p_method,p_info);
 		ERR_FAIL_COND_V(!bind,NULL);
+
+		String rettype;
+		if (p_name.operator String().find(":")!=-1) {
+			rettype = p_name.operator String().get_slice(":",1);
+			p_name = p_name.operator String().get_slice(":",0);
+		}
+
 		bind->set_name(p_name);
 		bind->set_default_arguments(p_default_args);
 
@@ -442,6 +460,8 @@ public:
 		}
 		type->method_map[p_name]=bind;
 #ifdef DEBUG_METHODS_ENABLED
+		if (!rettype.empty())
+			bind->set_return_type(rettype);
 		type->method_order.push_back(p_name);
 #endif
 
@@ -453,10 +473,11 @@ public:
 
 	static void add_signal(StringName p_type,const MethodInfo& p_signal);
 	static bool has_signal(StringName p_type,StringName p_signal);
+	static bool get_signal(StringName p_type,StringName p_signal,MethodInfo *r_signal);
 	static void get_signal_list(StringName p_type,List<MethodInfo> *p_signals,bool p_no_inheritance=false);
 
 	static void add_property(StringName p_type,const PropertyInfo& p_pinfo, const StringName& p_setter, const StringName& p_getter, int p_index=-1);
-	static void get_property_list(StringName p_type,List<PropertyInfo> *p_list,bool p_no_inheritance=false);
+	static void get_property_list(StringName p_type, List<PropertyInfo> *p_list, bool p_no_inheritance=false, const Object *p_validator=NULL);
 	static bool set_property(Object* p_object, const StringName& p_property, const Variant& p_value, bool *r_valid=NULL);
 	static bool get_property(Object* p_object,const StringName& p_property, Variant& r_value);
 	static Variant::Type get_property_type(const StringName& p_type, const StringName& p_property,bool *r_is_valid=NULL);
@@ -472,7 +493,7 @@ public:
 
 	static void add_virtual_method(const StringName& p_type,const MethodInfo& p_method,bool p_virtual=true );
 	static void get_virtual_methods(const StringName& p_type,List<MethodInfo> * p_methods,bool p_no_inheritance=false );
-	
+
 	static void bind_integer_constant(const StringName& p_type, const StringName &p_name, int p_constant);
 	static void get_integer_constant_list(const StringName& p_type, List<String> *p_constants, bool p_no_inheritance=false);
 	static int get_integer_constant(const StringName& p_type, const StringName &p_name, bool *p_success=NULL);
@@ -489,6 +510,8 @@ public:
 
 	static void add_compatibility_type(const StringName& p_type,const StringName& p_fallback);
 	static void init();
+
+	static void set_current_api(APIType p_api);
 	static void cleanup();
 };
 

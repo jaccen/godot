@@ -290,9 +290,6 @@ RID Rasterizer::_create_shader(const FixedMaterialShaderKey& p_key) {
 
 	//print_line("**VERTEX SHADER GENERATED code: \n"+vcode);
 
-	double tf = (OS::get_singleton()->get_ticks_usec()-t)/1000.0;
-//	print_line("generate: "+rtos(tf));
-
 	shader_set_code(fms.shader,vcode,code,lcode,0,0);
 
 	fixed_material_shaders[p_key]=fms;
@@ -370,7 +367,7 @@ RID Rasterizer::fixed_material_create() {
 		material_set_param(mat,_fixed_material_param_names[i],fm.param[i]); //must be there
 	}
 	fixed_material_dirty_list.add(&fm.dirty_list);
-	//print_line("FMC: "+itos(mat.get_id()));	
+	//print_line("FMC: "+itos(mat.get_id()));
 	return mat;
 }
 

@@ -40,7 +40,7 @@
 Globals *Globals::singleton=NULL;
 
 Globals *Globals::get_singleton() {
-	
+
 	return singleton;
 }
 
@@ -54,7 +54,8 @@ String Globals::localize_path(const String& p_path) const {
 	if (resource_path=="")
 		return p_path; //not initialied yet
 
-	if (p_path.find(":/") != -1)
+	if (p_path.begins_with("res://") || p_path.begins_with("user://") ||
+		(p_path.is_abs_path() && !p_path.begins_with(resource_path)))
 		return p_path.simplify_path();
 
 
@@ -82,6 +83,8 @@ String Globals::localize_path(const String& p_path) const {
 		if (sep == -1) {
 			return "res://"+path;
 		};
+
+
 		String parent = path.substr(0, sep);
 
 		String plocal = localize_path(parent);
@@ -108,7 +111,7 @@ bool Globals::is_persisting(const String& p_name) const {
 
 
 String Globals::globalize_path(const String& p_path) const {
-	
+
 	if (p_path.begins_with("res://")) {
 
 		if (resource_path != "") {
@@ -125,7 +128,7 @@ String Globals::globalize_path(const String& p_path) const {
 bool Globals::_set(const StringName& p_name, const Variant& p_value) {
 
 	_THREAD_SAFE_METHOD_
-	
+
 	if (p_value.get_type()==Variant::NIL)
 		props.erase(p_name);
 	else {
@@ -174,7 +177,7 @@ bool Globals::_get(const StringName& p_name,Variant &r_ret) const {
 		return false;
 	r_ret=props[p_name].variant;
 	return true;
-	
+
 }
 
 struct _VCSort {
@@ -188,13 +191,13 @@ struct _VCSort {
 };
 
 void Globals::_get_property_list(List<PropertyInfo> *p_list) const {
-	
+
 	_THREAD_SAFE_METHOD_
 
 	Set<_VCSort> vclist;
-	
+
 	for(Map<StringName,VariantContainer>::Element *E=props.front();E;E=E->next()) {
-		
+
 		const VariantContainer *v=&E->get();
 
 		if (v->hide_from_editor)
@@ -250,7 +253,7 @@ bool Globals::_load_resource_pack(const String& p_pack) {
 Error Globals::setup(const String& p_path,const String & p_main_pack) {
 
 	//an absolute mess of a function, must be cleaned up and reorganized somehow at some point
-	
+
 	//_load_settings(p_path+"/override.cfg");
 
 	if (p_main_pack!="") {
@@ -292,7 +295,7 @@ Error Globals::setup(const String& p_path,const String & p_main_pack) {
 		}
 
 	}
-	
+
 
 	if (FileAccessNetworkClient::get_singleton()) {
 
@@ -332,7 +335,7 @@ Error Globals::setup(const String& p_path,const String & p_main_pack) {
 		resource_path = p_path;
 
 	} else {
-	
+
 		d->change_dir(p_path);
 
 		String candidate = d->get_current_dir();
@@ -395,7 +398,7 @@ Error Globals::setup(const String& p_path,const String & p_main_pack) {
 }
 
 bool Globals::has(String p_var) const {
-	
+
 	_THREAD_SAFE_METHOD_
 
 	return props.has(p_var);
@@ -1330,17 +1333,18 @@ Variant _GLOBAL_DEF( const String& p_var, const Variant& p_default) {
 void Globals::add_singleton(const Singleton &p_singleton) {
 
 	singletons.push_back(p_singleton);
+	singleton_ptrs[p_singleton.name]=p_singleton.ptr;
 }
 
 Object* Globals::get_singleton_object(const String& p_name) const {
 
-	for(const List<Singleton>::Element *E=singletons.front();E;E=E->next()) {
-		if (E->get().name == p_name) {
-			return E->get().ptr;
-		};
-	};
 
-	return NULL;
+	const Map<StringName,Object*>::Element *E=singleton_ptrs.find(p_name);
+	if (!E)
+		return NULL;
+	else
+		return E->get();
+
 };
 
 bool Globals::has_singleton(const String& p_name) const {
@@ -1373,6 +1377,25 @@ Vector<String> Globals::get_optimizer_presets() const {
 
 }
 
+void Globals::_add_property_info_bind(const Dictionary& p_info) {
+
+	ERR_FAIL_COND(!p_info.has("name"));
+	ERR_FAIL_COND(!p_info.has("type"));
+
+	PropertyInfo pinfo;
+	pinfo.name = p_info["name"];
+	ERR_FAIL_COND(!props.has(pinfo.name));
+	pinfo.type = Variant::Type(p_info["type"].operator int());
+	ERR_FAIL_INDEX(pinfo.type, Variant::VARIANT_MAX);
+
+	if (p_info.has("hint"))
+		pinfo.hint = PropertyHint(p_info["hint"].operator int());
+	if (p_info.has("hint_string"))
+		pinfo.hint_string = p_info["hint_string"];
+
+	set_custom_property_info(pinfo.name, pinfo);
+}
+
 void Globals::set_custom_property_info(const String& p_prop,const PropertyInfo& p_info) {
 
 	ERR_FAIL_COND(!props.has(p_prop));
@@ -1397,6 +1420,7 @@ void Globals::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("get_order","name"),&Globals::get_order);
 	ObjectTypeDB::bind_method(_MD("set_persisting","name","enable"),&Globals::set_persisting);
 	ObjectTypeDB::bind_method(_MD("is_persisting","name"),&Globals::is_persisting);
+	ObjectTypeDB::bind_method(_MD("add_property_info", "hint"),&Globals::_add_property_info_bind);
 	ObjectTypeDB::bind_method(_MD("clear","name"),&Globals::clear);
 	ObjectTypeDB::bind_method(_MD("localize_path","path"),&Globals::localize_path);
 	ObjectTypeDB::bind_method(_MD("globalize_path","path"),&Globals::globalize_path);
@@ -1410,7 +1434,7 @@ void Globals::_bind_methods() {
 }
 
 Globals::Globals() {
-	
+
 
 	singleton=this;
 	last_order=0;
@@ -1427,7 +1451,7 @@ Globals::Globals() {
 
 	set("application/name","" );
 	set("application/main_scene","");
-	custom_prop_info["application/main_scene"]=PropertyInfo(Variant::STRING,"application/main_scene",PROPERTY_HINT_FILE,"scn,res,xscn,xml,tscn");
+	custom_prop_info["application/main_scene"]=PropertyInfo(Variant::STRING,"application/main_scene",PROPERTY_HINT_FILE,"tscn,scn,xscn,xml,res");
 	set("application/disable_stdout",false);
 	set("application/use_shared_user_dir",true);
 
@@ -1526,12 +1550,13 @@ Globals::Globals() {
 	custom_prop_info["render/thread_model"]=PropertyInfo(Variant::INT,"render/thread_model",PROPERTY_HINT_ENUM,"Single-Unsafe,Single-Safe,Multi-Threaded");
 	custom_prop_info["physics_2d/thread_model"]=PropertyInfo(Variant::INT,"physics_2d/thread_model",PROPERTY_HINT_ENUM,"Single-Unsafe,Single-Safe,Multi-Threaded");
 
+	set("debug/profiler_max_functions",16384);
 	using_datapack=false;
 }
 
 
 Globals::~Globals() {
-	
+
 	singleton=NULL;
 }
 

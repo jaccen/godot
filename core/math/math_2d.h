@@ -35,15 +35,15 @@
 	@author Juan Linietsky <reduzio@gmail.com>
 */
 enum Margin {
-	
+
 	MARGIN_LEFT,
 	MARGIN_TOP,
 	MARGIN_RIGHT,
-	MARGIN_BOTTOM	
+	MARGIN_BOTTOM
 };
 
 enum Orientation {
-	
+
 	HORIZONTAL,
 	VERTICAL
 };
@@ -63,7 +63,7 @@ enum VAlign {
 };
 
 struct Vector2 {
-	
+
 	union {
 		float x;
 		float width;
@@ -87,7 +87,7 @@ struct Vector2 {
 	float length() const;
 	float length_squared() const;
 
-	float distance_to(const Vector2& p_vector2) const; 
+	float distance_to(const Vector2& p_vector2) const;
 	float distance_squared_to(const Vector2& p_vector2) const;
 	float angle_to(const Vector2& p_vector2) const;
 	float angle_to_point(const Vector2& p_vector2) const;
@@ -114,19 +114,19 @@ struct Vector2 {
 	Vector2 operator-(const Vector2& p_v) const;
 	void operator-=(const Vector2& p_v);
 	Vector2 operator*(const Vector2 &p_v1) const;
-	
+
 	Vector2 operator*(const float &rvalue) const;
 	void operator*=(const float &rvalue);
 	void operator*=(const Vector2 &rvalue) { *this = *this * rvalue; }
 
 	Vector2 operator/(const Vector2 &p_v1) const;
-	
+
 	Vector2 operator/(const float &rvalue) const;
-	
+
 	void operator/=(const float &rvalue);
-	
+
 	Vector2 operator-() const;
-	
+
 	bool operator==(const Vector2& p_vec2) const;
 	bool operator!=(const Vector2& p_vec2) const;
 
@@ -151,14 +151,14 @@ struct Vector2 {
 
 		return Vector2(y,-x);
 	}
-	
+
 	Vector2 floor() const;
 	Vector2 snapped(const Vector2& p_by) const;
 	float get_aspect() const { return width/height; }
 
-	
-	operator String() const { return String::num(x)+","+String::num(y); }
-	
+
+	operator String() const { return String::num(x)+", "+String::num(y); }
+
 	_FORCE_INLINE_ Vector2(float p_x,float p_y) { x=p_x; y=p_y; }
 	_FORCE_INLINE_ Vector2() { x=0; y=0; }
 };
@@ -202,7 +202,7 @@ struct Matrix32;
 
 
 struct Rect2 {
-	
+
 	Point2 pos;
 	Size2 size;
 
@@ -213,7 +213,7 @@ struct Rect2 {
 
 	float get_area() const { return size.width*size.height; }
 
-	inline bool intersects(const Rect2& p_rect) const { 
+	inline bool intersects(const Rect2& p_rect) const {
 		if ( pos.x >= (p_rect.pos.x + p_rect.size.width) )
 			return false;
 		if ( (pos.x+size.width) <= p_rect.pos.x  )
@@ -222,7 +222,7 @@ struct Rect2 {
 			return false;
 		if ( (pos.y+size.height) <= p_rect.pos.y  )
 			return false;
-		
+
 		return true;
 	}
 
@@ -254,73 +254,73 @@ struct Rect2 {
 	bool intersects_segment(const Point2& p_from, const Point2& p_to, Point2* r_pos=NULL, Point2* r_normal=NULL) const;
 
 	inline bool encloses(const Rect2& p_rect) const {
-		
+
 		return 	(p_rect.pos.x>=pos.x) && (p_rect.pos.y>=pos.y) &&
 			((p_rect.pos.x+p_rect.size.x)<(pos.x+size.x)) &&
 			((p_rect.pos.y+p_rect.size.y)<(pos.y+size.y));
-		
+
 	}
-	
+
 	inline bool has_no_area() const {
-		
+
 		return (size.x<=0 || size.y<=0);
-		
+
 	}
 	inline Rect2 clip(const Rect2& p_rect) const { /// return a clipped rect
-		
+
 		Rect2 new_rect=p_rect;
-		
+
 		if (!intersects( new_rect ))
 			return Rect2();
-		
+
 		new_rect.pos.x = MAX( p_rect.pos.x , pos.x );
 		new_rect.pos.y = MAX( p_rect.pos.y , pos.y );
-		
+
 		Point2 p_rect_end=p_rect.pos+p_rect.size;
 		Point2 end=pos+size;
-		
+
 		new_rect.size.x=MIN(p_rect_end.x,end.x) - new_rect.pos.x;
 		new_rect.size.y=MIN(p_rect_end.y,end.y) - new_rect.pos.y;
-		
+
 		return new_rect;
 	}
-	
+
 	inline Rect2 merge(const Rect2& p_rect) const { ///< return a merged rect
-		
+
 		Rect2 new_rect;
-		
+
 		new_rect.pos.x=MIN( p_rect.pos.x , pos.x );
 		new_rect.pos.y=MIN( p_rect.pos.y , pos.y );
-		
-		
+
+
 		new_rect.size.x = MAX( p_rect.pos.x+p_rect.size.x , pos.x+size.x );
 		new_rect.size.y = MAX( p_rect.pos.y+p_rect.size.y , pos.y+size.y );
-		
+
 		new_rect.size = new_rect.size - new_rect.pos; //make relative again
-		
+
 		return new_rect;
 	};
 	inline bool has_point(const Point2& p_point) const {
 		if (p_point.x < pos.x)
-			return false; 
+			return false;
 		if (p_point.y < pos.y)
-			return false; 
-		
+			return false;
+
 		if (p_point.x >= (pos.x+size.x) )
-			return false; 
+			return false;
 		if (p_point.y >= (pos.y+size.y) )
-			return false; 
-		
+			return false;
+
 		return true;
 	}
-	
+
 	inline bool no_area() const { return (size.width<=0 || size.height<=0 ); }
-	
+
 	bool operator==(const Rect2& p_rect) const { return pos==p_rect.pos && size==p_rect.size; }
 	bool operator!=(const Rect2& p_rect) const { return pos!=p_rect.pos || size!=p_rect.size; }
-	
+
 	inline Rect2 grow(real_t p_by) const {
-		
+
 		Rect2 g=*this;
 		g.pos.x-=p_by;
 		g.pos.y-=p_by;
@@ -356,10 +356,10 @@ struct Rect2 {
 	}
 
 
-	operator String() const { return String(pos)+","+String(size); }
-	
+	operator String() const { return String(pos)+", "+String(size); }
+
 	Rect2() {}
-	Rect2( float p_x, float p_y, float p_width, float p_height) { pos=Point2(p_x,p_y); size=Size2( p_width, p_height ); }   
+	Rect2( float p_x, float p_y, float p_width, float p_height) { pos=Point2(p_x,p_y); size=Size2( p_width, p_height ); }
 	Rect2( const Point2& p_pos, const Size2& p_size ) { pos=p_pos; size=p_size; }
 };
 
@@ -409,7 +409,7 @@ struct Point2i {
 
 	float get_aspect() const { return width/(float)height; }
 
-	operator String() const { return String::num(x)+","+String::num(y); }
+	operator String() const { return String::num(x)+", "+String::num(y); }
 
 	operator Vector2() const { return Vector2(x,y); }
 	inline Point2i(const Vector2& p_vec2) { x=(int)p_vec2.x; y=(int)p_vec2.y; }
@@ -540,7 +540,7 @@ struct Rect2i {
 	}
 
 
-	operator String() const { return String(pos)+","+String(size); }
+	operator String() const { return String(pos)+", "+String(size); }
 
 	operator Rect2() const { return Rect2(pos,size); }
 	Rect2i(const Rect2& p_r2) { pos=p_r2.pos; size=p_r2.size; }
@@ -553,9 +553,7 @@ struct Rect2i {
 
 struct Matrix32 {
 
-
 	Vector2 elements[3];
-
 
 	_FORCE_INLINE_ float tdotx(const Vector2& v) const { return elements[0][0] * v.x + elements[1][0] * v.y; }
 	_FORCE_INLINE_ float tdoty(const Vector2& v) const { return elements[0][1] * v.x + elements[1][1] * v.y; }
@@ -577,25 +575,24 @@ struct Matrix32 {
 	_FORCE_INLINE_ void set_rotation_and_scale(real_t p_phi,const Size2& p_scale);
 	void rotate(real_t p_phi);
 
-	void scale(const Vector2& p_scale);
-	void scale_basis(const Vector2& p_scale);
+	void scale(const Size2& p_scale);
+	void scale_basis(const Size2& p_scale);
 	void translate( real_t p_tx, real_t p_ty);
 	void translate( const Vector2& p_translation );
 
 	float basis_determinant() const;
 
-	Vector2 get_scale() const;
+	Size2 get_scale() const;
 
 	_FORCE_INLINE_ const Vector2& get_origin() const { return elements[2]; }
 	_FORCE_INLINE_ void set_origin(const Vector2& p_origin) { elements[2]=p_origin; }
 
-	Matrix32 scaled(const Vector2& p_scale) const;
-	Matrix32 basis_scaled(const Vector2& p_scale) const;
+	Matrix32 scaled(const Size2& p_scale) const;
+	Matrix32 basis_scaled(const Size2& p_scale) const;
 	Matrix32 translated(const Vector2& p_offset) const;
 	Matrix32 rotated(float p_phi) const;
 
 	Matrix32 untranslated() const;
-
 
 	void orthonormalize();
 	Matrix32 orthonormalized() const;
@@ -615,13 +612,20 @@ struct Matrix32 {
 	_FORCE_INLINE_ Rect2 xform(const Rect2& p_vec) const;
 	_FORCE_INLINE_ Rect2 xform_inv(const Rect2& p_vec) const;
 
-
 	operator String() const;
 
+	Matrix32(real_t xx, real_t xy, real_t yx, real_t yy, real_t ox, real_t oy) {
+
+		elements[0][0] = xx;
+		elements[0][1] = xy;
+		elements[1][0] = yx;
+		elements[1][1] = yy;
+		elements[2][0] = ox;
+		elements[2][1] = oy;
+	}
 
 	Matrix32(real_t p_rot, const Vector2& p_pos);
 	Matrix32() { elements[0][0]=1.0; elements[1][1]=1.0; }
-
 };
 
 bool Rect2::intersects_transformed(const Matrix32& p_xform, const Rect2& p_rect) const {

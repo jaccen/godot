@@ -31,13 +31,19 @@
 
 #include "scene/gui/dialogs.h"
 #include "property_editor.h"
-#include "optimized_save_dialog.h"
 #include "undo_redo.h"
 #include "editor_data.h"
+#include "scene/gui/tab_container.h"
+#include "editor_autoload_settings.h"
+#include "editor_plugin_settings.h"
+
 //#include "project_export_settings.h"
 
 class ProjectSettings : public AcceptDialog {
 	OBJ_TYPE( ProjectSettings, AcceptDialog );
+
+
+	TabContainer *tab_container;
 
 	Timer *timer;
 	InputEvent::Type add_type;
@@ -83,20 +89,9 @@ class ProjectSettings : public AcceptDialog {
 	Tree *translation_remap;
 	Tree *translation_remap_options;
 
+	EditorAutoloadSettings *autoload_settings;
 
-	Tree *autoload_list;
-	EditorFileDialog *autoload_file_open;
-	LineEdit *autoload_add_name;
-	LineEdit *autoload_add_path;
-
-	void _update_autoload();
-	void _autoload_file_callback(const String& p_path);
-	void _autoload_add();
-	void _autoload_edited();
-	void _autoload_file_open();
-	void _autoload_delete(Object *p_item,int p_column, int p_button);
-	bool updating_autoload;
-
+	EditorPluginSettings *plugin_settings;
 
 	void _item_selected();
 	void _item_adds(String);
@@ -116,7 +111,7 @@ class ProjectSettings : public AcceptDialog {
 	void _action_button_pressed(Object* p_obj, int p_column,int p_id);
 	void _wait_for_key(const InputEvent& p_event);
 	void _press_a_key_confirm();
-
+	void _show_last_added(const InputEvent& p_event);
 
 	void _settings_prop_edited(const String& p_name);
 	void _settings_changed();
@@ -142,6 +137,8 @@ class ProjectSettings : public AcceptDialog {
 	void _toggle_search_bar(bool p_pressed);
 	void _clear_search_box();
 
+
+
 	ProjectSettings();
 
 
@@ -156,6 +153,9 @@ public:
 	void add_translation(const String& p_translation);
 	static ProjectSettings *get_singleton() { return singleton; }
 	void popup_project_settings();
+	void set_plugins_page();
+
+	void queue_save();
 
 
 	ProjectSettings(EditorData *p_data);

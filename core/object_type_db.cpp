@@ -189,6 +189,14 @@ MethodDefinition _MD(const char* p_name,const char *p_arg1,const char *p_arg2,co
 
 #endif
 
+
+ObjectTypeDB::APIType ObjectTypeDB::current_api=API_CORE;
+
+void ObjectTypeDB::set_current_api(APIType p_api) {
+
+	current_api=p_api;
+}
+
 HashMap<StringName,ObjectTypeDB::TypeInfo,StringNameHasher> ObjectTypeDB::types;
 HashMap<StringName,StringName,StringNameHasher> ObjectTypeDB::resource_base_extensions;
 HashMap<StringName,StringName,StringNameHasher> ObjectTypeDB::compat_types;
@@ -200,37 +208,37 @@ ObjectTypeDB::TypeInfo::TypeInfo() {
 	disabled=false;
 }
 ObjectTypeDB::TypeInfo::~TypeInfo() {
-	
-	
+
+
 }
 
 
 bool ObjectTypeDB::is_type(const StringName &p_type,const StringName& p_inherits) {
-	
+
 	OBJTYPE_LOCK;
-	
+
 	StringName inherits=p_type;
-	
+
 	while (inherits.operator String().length()) {
-		
+
 		if (inherits==p_inherits)
 			return true;
 		inherits=type_inherits_from(inherits);
 	}
-	
+
 	return false;
 }
 void ObjectTypeDB::get_type_list( List<StringName> *p_types) {
-	
+
 	OBJTYPE_LOCK;
-	
+
 	const StringName *k=NULL;
-	
+
 	while((k=types.next(k))) {
-		
+
 		p_types->push_back(*k);
 	}
-	
+
 	p_types->sort();
 }
 
@@ -238,11 +246,11 @@ void ObjectTypeDB::get_type_list( List<StringName> *p_types) {
 void ObjectTypeDB::get_inheriters_from( const StringName& p_type,List<StringName> *p_types) {
 
 	OBJTYPE_LOCK;
-	
+
 	const StringName *k=NULL;
-	
+
 	while((k=types.next(k))) {
-		
+
 		if (*k!=p_type && is_type(*k,p_type))
 			p_types->push_back(*k);
 	}
@@ -250,18 +258,183 @@ void ObjectTypeDB::get_inheriters_from( const StringName& p_type,List<StringName
 }
 
 StringName ObjectTypeDB::type_inherits_from(const StringName& p_type) {
-	
+
 	OBJTYPE_LOCK;
-	
+
 	TypeInfo *ti = types.getptr(p_type);
 	ERR_FAIL_COND_V(!ti,"");
 	return ti->inherits;
 }
 
-bool ObjectTypeDB::type_exists(const StringName &p_type) {
-	
+ObjectTypeDB::APIType ObjectTypeDB::get_api_type(const StringName &p_type) {
+
 	OBJTYPE_LOCK;
-	return types.has(p_type);	
+
+	TypeInfo *ti = types.getptr(p_type);
+	ERR_FAIL_COND_V(!ti,API_NONE);
+	return ti->api;
+}
+
+uint64_t ObjectTypeDB::get_api_hash(APIType p_api) {
+
+#ifdef DEBUG_METHODS_ENABLED
+
+	uint64_t hash = hash_djb2_one_64(HashMapHahserDefault::hash(VERSION_FULL_NAME));
+
+	List<StringName> names;
+
+	const StringName *k=NULL;
+
+	while((k=types.next(k))) {
+
+		names.push_back(*k);
+	}
+	//must be alphabetically sorted for hash to compute
+	names.sort_custom<StringName::AlphCompare>();
+
+	for (List<StringName>::Element *E=names.front();E;E=E->next()) {
+
+		TypeInfo *t = types.getptr(E->get());
+		ERR_FAIL_COND_V(!t,0);
+		if (t->api!=p_api)
+			continue;
+		hash = hash_djb2_one_64(t->name.hash(),hash);
+		hash = hash_djb2_one_64(t->inherits.hash(),hash);
+
+		{ //methods
+
+			List<StringName> snames;
+
+			k=NULL;
+
+			while((k=t->method_map.next(k))) {
+
+				snames.push_back(*k);
+			}
+
+			snames.sort_custom<StringName::AlphCompare>();
+
+			for (List<StringName>::Element *F=snames.front();F;F=F->next()) {
+
+				MethodBind *mb = t->method_map[F->get()];
+				hash = hash_djb2_one_64( mb->get_name().hash(), hash);
+				hash = hash_djb2_one_64( mb->get_argument_count(), hash);
+				hash = hash_djb2_one_64( mb->get_argument_type(-1), hash); //return
+
+				for(int i=0;i<mb->get_argument_count();i++) {
+					hash = hash_djb2_one_64( mb->get_argument_info(i).type, hash );
+					hash = hash_djb2_one_64( mb->get_argument_info(i).name.hash(), hash );
+					hash = hash_djb2_one_64( mb->get_argument_info(i).hint, hash );
+					hash = hash_djb2_one_64( mb->get_argument_info(i).hint_string.hash(), hash );
+				}
+
+				hash = hash_djb2_one_64( mb->get_default_argument_count(), hash);
+
+				for(int i=0;i<mb->get_default_argument_count();i++) {
+					//hash should not change, i hope for tis
+					Variant da = mb->get_default_argument(i);
+					hash = hash_djb2_one_64( da.hash(), hash );
+				}
+
+				hash = hash_djb2_one_64( mb->get_hint_flags(), hash);
+
+			}
+		}
+
+
+		{ //constants
+
+			List<StringName> snames;
+
+			k=NULL;
+
+			while((k=t->constant_map.next(k))) {
+
+				snames.push_back(*k);
+			}
+
+			snames.sort_custom<StringName::AlphCompare>();
+
+			for (List<StringName>::Element *F=snames.front();F;F=F->next()) {
+
+				hash = hash_djb2_one_64(F->get().hash(), hash);
+				hash = hash_djb2_one_64( t->constant_map[F->get()], hash);
+			}
+		}
+
+
+		{ //signals
+
+			List<StringName> snames;
+
+			k=NULL;
+
+			while((k=t->signal_map.next(k))) {
+
+				snames.push_back(*k);
+			}
+
+			snames.sort_custom<StringName::AlphCompare>();
+
+			for (List<StringName>::Element *F=snames.front();F;F=F->next()) {
+
+				MethodInfo &mi = t->signal_map[F->get()];
+				hash = hash_djb2_one_64( F->get().hash(), hash);
+				for(int i=0;i<mi.arguments.size();i++) {
+					hash = hash_djb2_one_64( mi.arguments[i].type, hash);
+				}
+			}
+		}
+
+		{ //properties
+
+			List<StringName> snames;
+
+			k=NULL;
+
+			while((k=t->property_setget.next(k))) {
+
+				snames.push_back(*k);
+			}
+
+			snames.sort_custom<StringName::AlphCompare>();
+
+			for (List<StringName>::Element *F=snames.front();F;F=F->next()) {
+
+				PropertySetGet *psg=t->property_setget.getptr(F->get());
+
+				hash = hash_djb2_one_64( F->get().hash(), hash);
+				hash = hash_djb2_one_64( psg->setter.hash(), hash);
+				hash = hash_djb2_one_64( psg->getter.hash(), hash);
+
+			}
+		}
+
+		//property list
+		for (List<PropertyInfo>::Element *F=t->property_list.front();F;F=F->next()) {
+
+			hash = hash_djb2_one_64( F->get().name.hash(), hash);
+			hash = hash_djb2_one_64( F->get().type, hash);
+			hash = hash_djb2_one_64( F->get().hint, hash);
+			hash = hash_djb2_one_64( F->get().hint_string.hash(), hash);
+			hash = hash_djb2_one_64( F->get().usage, hash);
+		}
+
+
+	}
+
+
+	return hash;
+#else
+	return 0;
+#endif
+
+}
+
+bool ObjectTypeDB::type_exists(const StringName &p_type) {
+
+	OBJTYPE_LOCK;
+	return types.has(p_type);
 }
 
 void ObjectTypeDB::add_compatibility_type(const StringName& p_type,const StringName& p_fallback) {
@@ -270,7 +443,7 @@ void ObjectTypeDB::add_compatibility_type(const StringName& p_type,const StringN
 }
 
 Object *ObjectTypeDB::instance(const StringName &p_type) {
-	
+
 	TypeInfo *ti;
 	{
 		OBJTYPE_LOCK;
@@ -288,9 +461,9 @@ Object *ObjectTypeDB::instance(const StringName &p_type) {
 	return ti->creation_func();
 }
 bool ObjectTypeDB::can_instance(const StringName &p_type) {
-	
+
 	OBJTYPE_LOCK;
-	
+
 	TypeInfo *ti = types.getptr(p_type);
 	ERR_FAIL_COND_V(!ti,false);
 	return (!ti->disabled && ti->creation_func!=NULL);
@@ -309,6 +482,7 @@ void ObjectTypeDB::_add_type2(const StringName& p_type, const StringName& p_inhe
 	TypeInfo &ti=types[name];
 	ti.name=name;
 	ti.inherits=p_inherits;
+	ti.api=current_api;
 
 	if (ti.inherits) {
 
@@ -326,11 +500,11 @@ void ObjectTypeDB::get_method_list(StringName p_type,List<MethodInfo> *p_methods
 
 
 	OBJTYPE_LOCK;
-	
+
 	TypeInfo *type=types.getptr(p_type);
-	
+
 	while(type) {
-	
+
 		if (type->disabled) {
 
 			if (p_no_inheritance)
@@ -348,14 +522,14 @@ void ObjectTypeDB::get_method_list(StringName p_type,List<MethodInfo> *p_methods
 		}
 
 		for( List<StringName>::Element *E=type->method_order.front();E;E=E->next()) {
-		
+
 			MethodBind *method=type->method_map.get(E->get());
 			MethodInfo minfo;
 			minfo.name=E->get();
 			minfo.id=method->get_method_id();
 
 			for (int i=0;i<method->get_argument_count();i++) {
-			
+
 				//Variant::Type t=method->get_argument_type(i);
 
 				minfo.arguments.push_back(method->get_argument_info(i));
@@ -386,24 +560,24 @@ void ObjectTypeDB::get_method_list(StringName p_type,List<MethodInfo> *p_methods
 
 
 #endif
-		
+
 		if (p_no_inheritance)
 			break;
-		
+
 		type=type->inherits_ptr;
 	}
-	
+
 }
 
 
 MethodBind *ObjectTypeDB::get_method(StringName p_type, StringName p_name) {
 
 	OBJTYPE_LOCK;
-	
+
 	TypeInfo *type=types.getptr(p_type);
-	
+
 	while(type) {
-	
+
 		MethodBind **method=type->method_map.getptr(p_name);
 		if (method && *method)
 			return *method;
@@ -416,18 +590,18 @@ MethodBind *ObjectTypeDB::get_method(StringName p_type, StringName p_name) {
 void ObjectTypeDB::bind_integer_constant(const StringName& p_type, const StringName &p_name, int p_constant) {
 
 	OBJTYPE_LOCK;
-	
+
 	TypeInfo *type=types.getptr(p_type);
 	if (!type) {
 
 		ERR_FAIL_COND(!type);
 	}
-	
+
 	if (type->constant_map.has(p_name)) {
 
 		ERR_FAIL();
 	}
-	
+
 	type->constant_map[p_name]=p_constant;
 #ifdef DEBUG_METHODS_ENABLED
 	type->constant_order.push_back(p_name);
@@ -438,11 +612,11 @@ void ObjectTypeDB::bind_integer_constant(const StringName& p_type, const StringN
 void ObjectTypeDB::get_integer_constant_list(const StringName& p_type, List<String> *p_constants, bool p_no_inheritance) {
 
 	OBJTYPE_LOCK;
-	
+
 	TypeInfo *type=types.getptr(p_type);
-	
+
 	while(type) {
-	
+
 #ifdef DEBUG_METHODS_ENABLED
 		for(List<StringName>::Element *E=type->constant_order.front();E;E=E->next())
 			p_constants->push_back(E->get());
@@ -456,7 +630,7 @@ void ObjectTypeDB::get_integer_constant_list(const StringName& p_type, List<Stri
 #endif
 		if (p_no_inheritance)
 			break;
-		
+
 		type=type->inherits_ptr;
 	}
 
@@ -466,28 +640,28 @@ void ObjectTypeDB::get_integer_constant_list(const StringName& p_type, List<Stri
 int ObjectTypeDB::get_integer_constant(const StringName& p_type, const StringName &p_name, bool *p_success) {
 
 	OBJTYPE_LOCK;
-	
-	
+
+
 	TypeInfo *type=types.getptr(p_type);
-	
+
 	while(type) {
-	
+
 
 		int *constant=type->constant_map.getptr(p_name);
 		if (constant) {
-			
+
 			if (p_success)
 				*p_success=true;
 			return *constant;
 		}
-		
+
 		type=type->inherits_ptr;
 	}
-		
-	if (p_success)
-		*p_success=false;	
 
-	return 0;	
+	if (p_success)
+		*p_success=false;
+
+	return 0;
 }
 
 void ObjectTypeDB::add_signal(StringName p_type,const MethodInfo& p_signal) {
@@ -543,6 +717,23 @@ bool ObjectTypeDB::has_signal(StringName p_type,StringName p_signal) {
 	while(check) {
 		if (check->signal_map.has(p_signal))
 			return true;
+		check=check->inherits_ptr;
+	}
+
+	return false;
+}
+
+bool ObjectTypeDB::get_signal(StringName p_type,StringName p_signal,MethodInfo *r_signal) {
+
+	TypeInfo *type=types.getptr(p_type);
+	TypeInfo *check=type;
+	while(check) {
+		if (check->signal_map.has(p_signal)) {
+			if (r_signal) {
+				*r_signal=check->signal_map[p_signal];
+			}
+			return true;
+		}
 		check=check->inherits_ptr;
 	}
 
@@ -619,14 +810,22 @@ void ObjectTypeDB::add_property(StringName p_type,const PropertyInfo& p_pinfo, c
 }
 
 
-void ObjectTypeDB::get_property_list(StringName p_type,List<PropertyInfo> *p_list,bool p_no_inheritance) {
+void ObjectTypeDB::get_property_list(StringName p_type, List<PropertyInfo> *p_list, bool p_no_inheritance,const Object *p_validator) {
 
 	TypeInfo *type=types.getptr(p_type);
 	TypeInfo *check=type;
 	while(check) {
 
-		for(List<PropertyInfo>::Element *E=type->property_list.front();E;E=E->next()) {
-			p_list->push_back(E->get());
+		for(List<PropertyInfo>::Element *E=check->property_list.front();E;E=E->next()) {
+
+
+			if (p_validator) {
+				PropertyInfo pi = E->get();
+				p_validator->_validate_property(pi);
+				p_list->push_back(pi);
+			} else {
+				p_list->push_back(E->get());
+			}
 		}
 
 		if (p_no_inheritance)
@@ -820,7 +1019,7 @@ MethodBind* ObjectTypeDB::bind_methodfi(uint32_t p_flags, MethodBind *p_bind , c
 
 	TypeInfo *type=types.getptr(instance_type);
 	if (!type) {
-		print_line("couldn't bind method "+mdname+" for instance: "+instance_type);
+		ERR_PRINTS("Couldn't bind method '"+mdname+"' for instance: "+instance_type);
 		memdelete(p_bind);
 		ERR_FAIL_COND_V(!type,NULL);
 	}
@@ -841,21 +1040,14 @@ MethodBind* ObjectTypeDB::bind_methodfi(uint32_t p_flags, MethodBind *p_bind , c
 
 	Vector<Variant> defvals;
 
-#define PARSE_DEFVAL(m_defval)\
-if (d##m_defval.used) defvals.insert(0,d##m_defval.val);\
-else goto set_defvals;
-
 	defvals.resize(p_defcount);
 	for(int i=0;i<p_defcount;i++) {
 
 		defvals[i]=*p_defs[p_defcount-i-1];
 	}
 
-	set_defvals:
-
 	p_bind->set_default_arguments(defvals);
 	p_bind->set_hint_flags(p_flags);
-#undef PARSE_DEFVAL
 	return p_bind;
 
 }
@@ -966,7 +1158,7 @@ void ObjectTypeDB::init() {
 }
 
 void ObjectTypeDB::cleanup() {
-	
+
 
 #ifndef NO_THREADS
 
@@ -974,19 +1166,19 @@ void ObjectTypeDB::cleanup() {
 #endif
 
 	//OBJTYPE_LOCK; hah not here
-	
+
 	const StringName *k=NULL;
-	
+
 	while((k=types.next(k))) {
-		
+
 		TypeInfo &ti=types[*k];
-		
+
 		const StringName *m=NULL;
 		while((m=ti.method_map.next(m))) {
-			
+
 			memdelete( ti.method_map[*m] );
 		}
-	}	
+	}
 	types.clear();
 	resource_base_extensions.clear();
 	compat_types.clear();

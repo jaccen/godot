@@ -57,7 +57,7 @@ public:
 
 		TRANS_COUNT,
     };
-        
+
     enum EaseType {
         EASE_IN,
         EASE_OUT,
@@ -143,6 +143,7 @@ private:
 
 	void _tween_process(float p_delta);
 	void _set_process(bool p_process,bool p_force=false);
+	void _remove(Object *p_node, String p_key, bool first_only);
 
 protected:
 
@@ -206,7 +207,7 @@ public:
 		, String p_callback
 		, VARIANT_ARG_DECLARE
 	);
-	
+
 	bool interpolate_deferred_callback(Object *p_object
 		, real_t p_times_in_sec
 		, String p_callback

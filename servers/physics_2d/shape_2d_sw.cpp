@@ -136,7 +136,7 @@ bool LineShape2DSW::intersect_segment(const Vector2& p_begin,const Vector2& p_en
 	return true;
 }
 
-real_t LineShape2DSW::get_moment_of_inertia(float p_mass, const Vector2 &p_scale) const {
+real_t LineShape2DSW::get_moment_of_inertia(float p_mass, const Size2 &p_scale) const {
 
 	return 0;
 }
@@ -191,7 +191,7 @@ bool RayShape2DSW::intersect_segment(const Vector2& p_begin,const Vector2& p_end
 
 }
 
-real_t RayShape2DSW::get_moment_of_inertia(float p_mass, const Vector2 &p_scale) const {
+real_t RayShape2DSW::get_moment_of_inertia(float p_mass, const Size2 &p_scale) const {
 
 	return 0; //rays are mass-less
 }
@@ -243,7 +243,6 @@ bool SegmentShape2DSW::intersect_segment(const Vector2& p_begin,const Vector2& p
 	if (!Geometry::segment_intersects_segment_2d(p_begin,p_end,a,b,&r_point))
 		return false;
 
-	Vector2 d = p_end-p_begin;
 	if (n.dot(p_begin) > n.dot(a)) {
 		r_normal=n;
 	} else {
@@ -253,7 +252,7 @@ bool SegmentShape2DSW::intersect_segment(const Vector2& p_begin,const Vector2& p
 	return true;
 }
 
-real_t SegmentShape2DSW::get_moment_of_inertia(float p_mass, const Vector2 &p_scale) const {
+real_t SegmentShape2DSW::get_moment_of_inertia(float p_mass, const Size2 &p_scale) const {
 
 	Vector2 s[2]={a*p_scale,b*p_scale};
 
@@ -337,7 +336,7 @@ bool CircleShape2DSW::intersect_segment(const Vector2& p_begin,const Vector2& p_
 	return true;
 }
 
-real_t CircleShape2DSW::get_moment_of_inertia(float p_mass, const Vector2 &p_scale) const {
+real_t CircleShape2DSW::get_moment_of_inertia(float p_mass, const Size2 &p_scale) const {
 
 	return (radius*radius)*(p_scale.x*0.5+p_scale.y*0.5);
 
@@ -408,7 +407,7 @@ bool RectangleShape2DSW::intersect_segment(const Vector2& p_begin,const Vector2&
 	return get_aabb().intersects_segment(p_begin,p_end,&r_point,&r_normal);
 }
 
-real_t RectangleShape2DSW::get_moment_of_inertia(float p_mass,const Vector2& p_scale) const {
+real_t RectangleShape2DSW::get_moment_of_inertia(float p_mass,const Size2& p_scale) const {
 
 	Vector2 he2=half_extents*2*p_scale;
 	return p_mass*he2.dot(he2)/12.0f;
@@ -541,7 +540,7 @@ bool CapsuleShape2DSW::intersect_segment(const Vector2& p_begin,const Vector2& p
 	return collided; //todo
 }
 
-real_t CapsuleShape2DSW::get_moment_of_inertia(float p_mass, const Vector2 &p_scale) const {
+real_t CapsuleShape2DSW::get_moment_of_inertia(float p_mass, const Size2 &p_scale) const {
 
 	Vector2 he2=Vector2(radius*2,height+radius*2)*p_scale;
 	return p_mass*he2.dot(he2)/12.0f;
@@ -671,7 +670,7 @@ bool ConvexPolygonShape2DSW::intersect_segment(const Vector2& p_begin,const Vect
 	return inters; //todo
 }
 
-real_t ConvexPolygonShape2DSW::get_moment_of_inertia(float p_mass,const Vector2& p_scale) const {
+real_t ConvexPolygonShape2DSW::get_moment_of_inertia(float p_mass,const Size2& p_scale) const {
 
 	Rect2 aabb;
 	aabb.pos=points[0].pos*p_scale;
@@ -746,7 +745,7 @@ Variant ConvexPolygonShape2DSW::get_data() const {
 
 	dvr.resize(point_count);
 
-	for(int i=0;i<point_count;i++) {	
+	for(int i=0;i<point_count;i++) {
 		dvr.set(i,points[i].pos);
 	}
 
@@ -825,7 +824,6 @@ bool ConcavePolygonShape2DSW::intersect_segment(const Vector2& p_begin,const Vec
 	const Segment *segmentptr=&segments[0];
 	const Vector2 *pointptr=&points[0];
 	const BVH *bvhptr = &bvh[0];
-	int pos=bvh.size()-1;
 
 
 	stack[0]=0;
@@ -968,19 +966,25 @@ void ConcavePolygonShape2DSW::set_data(const Variant& p_data) {
 
 	ERR_FAIL_COND(p_data.get_type()!=Variant::VECTOR2_ARRAY && p_data.get_type()!=Variant::REAL_ARRAY);
 
-	segments.clear();;
-	points.clear();;
-	bvh.clear();;
-	bvh_depth=1;
-
 	Rect2 aabb;
 
 	if (p_data.get_type()==Variant::VECTOR2_ARRAY) {
 
 		DVector<Vector2> p2arr = p_data;
 		int len = p2arr.size();
-		DVector<Vector2>::Read arr = p2arr.read();
+		ERR_FAIL_COND(len%2);
 
+		segments.clear();
+		points.clear();
+		bvh.clear();
+		bvh_depth=1;
+
+		if (len==0) {
+			configure(aabb);
+			return;
+		}
+
+		DVector<Vector2>::Read arr = p2arr.read();
 
 		Map<Point2,int> pointmap;
 		for(int i=0;i<len;i+=2) {
@@ -988,8 +992,6 @@ void ConcavePolygonShape2DSW::set_data(const Variant& p_data) {
 			Point2 p1 =arr[i];
 			Point2 p2 =arr[i+1];
 			int idx_p1,idx_p2;
-			if (p1==p2)
-				continue; //don't want it
 
 			if (pointmap.has(p1)) {
 				idx_p1=pointmap[p1];
@@ -1084,7 +1086,6 @@ void ConcavePolygonShape2DSW::cull(const Rect2& p_local_aabb,Callback p_callback
 	const Segment *segmentptr=&segments[0];
 	const Vector2 *pointptr=&points[0];
 	const BVH *bvhptr = &bvh[0];
-	int pos=bvh.size()-1;
 
 
 	stack[0]=0;

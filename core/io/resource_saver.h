@@ -42,7 +42,7 @@
 
 class ResourceFormatSaver {
 public:
-	
+
 	virtual Error save(const String &p_path,const RES& p_resource,uint32_t p_flags=0)=0;
 	virtual bool recognize(const RES& p_resource) const=0;
 	virtual void get_recognized_extensions(const RES& p_resource,List<String> *p_extensions) const=0;
@@ -52,12 +52,12 @@ public:
 
 typedef void (*ResourceSavedCallback)(const String& p_path);
 
-class ResourceSaver {	
-	
+class ResourceSaver {
+
 	enum {
 		MAX_SAVERS=64
 	};
-	
+
 	static ResourceFormatSaver *saver[MAX_SAVERS];
 	static int saver_count;
 	static bool timestamp_on_save;
@@ -80,13 +80,13 @@ public:
 
 	static Error save(const String &p_path,const RES& p_resource,uint32_t p_flags=0);
 	static void get_recognized_extensions(const RES& p_resource,List<String> *p_extensions);
-	static void add_resource_format_saver(ResourceFormatSaver *p_format_saver);
+	static void add_resource_format_saver(ResourceFormatSaver *p_format_saver,bool p_at_front=false);
 
 	static void set_timestamp_on_save(bool p_timestamp) { timestamp_on_save=p_timestamp; }
 	static void set_save_callback(ResourceSavedCallback p_callback);
 
 
-	
+
 };
 
 

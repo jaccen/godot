@@ -33,6 +33,8 @@
 #include "io/config_file.h"
 #include "os/main_loop.h"
 #include "io/packet_peer.h"
+#include "math/a_star.h"
+#include "math/triangle_mesh.h"
 #include "globals.h"
 #include "object_type_db.h"
 #include "geometry.h"
@@ -48,9 +50,11 @@
 #include "os/input.h"
 #include "core/io/xml_parser.h"
 #include "io/http_client.h"
+#include "io/pck_packer.h"
 #include "packed_data_container.h"
 #include "func_ref.h"
 #include "input_map.h"
+#include "undo_redo.h"
 
 #ifdef XML_ENABLED
 static ResourceFormatSaverXML *resource_saver_xml=NULL;
@@ -80,7 +84,7 @@ extern void unregister_variant_methods();
 
 void register_core_types() {
 
-	
+
 	_global_mutex=Mutex::create();
 
 
@@ -91,7 +95,7 @@ void register_core_types() {
 
 
 	CoreStringNames::create();
-	
+
 	resource_format_po = memnew( TranslationLoaderPO );
 	ResourceLoader::add_resource_format_loader( resource_format_po );
 
@@ -117,6 +121,7 @@ void register_core_types() {
 	ObjectTypeDB::register_type<Resource>();
 	ObjectTypeDB::register_type<FuncRef>();
 	ObjectTypeDB::register_virtual_type<StreamPeer>();
+	ObjectTypeDB::register_type<StreamPeerBuffer>();
 	ObjectTypeDB::register_create_type<StreamPeerTCP>();
 	ObjectTypeDB::register_create_type<TCP_Server>();
 	ObjectTypeDB::register_create_type<PacketPeerUDP>();
@@ -128,8 +133,9 @@ void register_core_types() {
 //	ObjectTypeDB::register_type<OptimizedSaver>();
 	ObjectTypeDB::register_type<Translation>();
 	ObjectTypeDB::register_type<PHashTranslation>();
-
+	ObjectTypeDB::register_type<UndoRedo>();
 	ObjectTypeDB::register_type<HTTPClient>();
+	ObjectTypeDB::register_type<TriangleMesh>();
 
 	ObjectTypeDB::register_virtual_type<ResourceInteractiveLoader>();
 
@@ -143,8 +149,11 @@ void register_core_types() {
 
 	ObjectTypeDB::register_type<ConfigFile>();
 
+	ObjectTypeDB::register_type<PCKPacker>();
+
 	ObjectTypeDB::register_type<PackedDataContainer>();
 	ObjectTypeDB::register_virtual_type<PackedDataContainerRef>();
+	ObjectTypeDB::register_type<AStar>();
 
 	ip = IP::create();
 
@@ -170,7 +179,7 @@ void register_core_singletons() {
 	Globals::get_singleton()->add_singleton( Globals::Singleton("ResourceSaver",_ResourceSaver::get_singleton()) );
 	Globals::get_singleton()->add_singleton( Globals::Singleton("PathRemap",PathRemap::get_singleton() ) );
 	Globals::get_singleton()->add_singleton( Globals::Singleton("OS",_OS::get_singleton() ) );
-	Globals::get_singleton()->add_singleton( Globals::Singleton("Marshalls",_marshalls ) );
+	Globals::get_singleton()->add_singleton( Globals::Singleton("Marshalls",_Marshalls::get_singleton() ) );
 	Globals::get_singleton()->add_singleton( Globals::Singleton("TranslationServer",TranslationServer::get_singleton() ) );
 	Globals::get_singleton()->add_singleton( Globals::Singleton("TS",TranslationServer::get_singleton() ) );
 	Globals::get_singleton()->add_singleton( Globals::Singleton("Input",Input::get_singleton() ) );

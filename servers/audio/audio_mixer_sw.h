@@ -69,8 +69,7 @@ private:
 		MIX_VOLRAMP_FRAC_MASK=MIX_VOLRAMP_FRAC_LEN-1,
 		MIX_FILTER_FRAC_BITS=16,
 		MIX_FILTER_RAMP_FRAC_BITS=8,
-		MIX_VOL_MOVE_TO_24=4,
-		MAX_REVERBS=4
+		MIX_VOL_MOVE_TO_24=4
 	};
 
 
@@ -197,7 +196,7 @@ private:
 
 	void mix_channel(Channel& p_channel);
 	int mix_chunk_left;
-	void mix_chunk();	
+	void mix_chunk();
 
 	float channel_nrg;
 	int channel_id_count;

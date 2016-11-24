@@ -38,7 +38,7 @@
 
 
 class Globals : public Object {
-	
+
 	OBJ_TYPE( Globals, Object );
 	_THREAD_SAFE_CLASS_
 
@@ -77,13 +77,13 @@ protected:
 	bool using_datapack;
 	List<String> input_presets;
 
-	
+
 	bool _set(const StringName& p_name, const Variant& p_value);
 	bool _get(const StringName& p_name,Variant &r_ret) const;
 	void _get_property_list(List<PropertyInfo> *p_list) const;
-	
+
 	static Globals *singleton;
-	
+
 	Error _load_settings(const String p_path);
 	Error _load_settings_binary(const String p_path);
 
@@ -91,17 +91,20 @@ protected:
 	Error _save_settings_binary(const String& p_file,const Map<String,List<String> > &props,const CustomMap& p_custom=CustomMap());
 
 	List<Singleton> singletons;
+	Map<StringName,Object*> singleton_ptrs;
 
 	Error _save_custom_bnd(const String& p_file);
 
 	bool _load_resource_pack(const String& p_pack);
+
+	void _add_property_info_bind(const Dictionary& p_info);
 
 protected:
 
 	static void _bind_methods();
 public:
 
-	
+
 	bool has(String p_var) const;
 	String localize_path(const String& p_path) const;
 	String globalize_path(const String& p_path) const;
@@ -110,13 +113,13 @@ public:
 	bool is_persisting(const String& p_name) const;
 
 	String get_resource_path() const;
-	
+
 	static Globals *get_singleton();
 
 	void clear(const String& p_name);
 	int get_order(const String& p_name) const;
 	void set_order(const String& p_name, int p_order);
-	
+
 	Error setup(const String& p_path, const String &p_main_pack);
 
 	Error save_custom(const String& p_path="",const CustomMap& p_custom=CustomMap(),const Set<String>& p_ignore_masks=Set<String>());
@@ -141,7 +144,7 @@ public:
 
 	void set_registering_order(bool p_registering);
 
-	Globals();	
+	Globals();
 	~Globals();
 
 };

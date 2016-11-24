@@ -77,11 +77,16 @@ public:
 class EditorHelpIndex : public ConfirmationDialog {
 	OBJ_TYPE( EditorHelpIndex, ConfirmationDialog );
 
-
+	LineEdit *search_box;
 	Tree *class_list;
 	HashMap<String,TreeItem*> tree_item_map;
 
 	void _tree_item_selected();
+	void _text_changed(const String& p_text);
+	void _sbox_input(const InputEvent& p_ie);
+
+	void _update_class_list();
+
 	void add_type(const String& p_type,HashMap<String,TreeItem*>& p_types,TreeItem *p_root);
 protected:
 
@@ -91,6 +96,8 @@ protected:
 public:
 
 	void select_class(const String& p_class);
+
+	void popup();
 
 	EditorHelpIndex();
 };
@@ -150,6 +157,7 @@ class EditorHelp : public VBoxContainer {
 	void _scroll_changed(double p_scroll);
 	void _class_list_select(const String& p_select);
 	void _class_desc_select(const String& p_select);
+	void _class_desc_input(const InputEvent& p_input);
 
 	Error _goto_desc(const String& p_class, int p_vscr=-1);
 	//void _update_history_buttons();
@@ -192,6 +200,23 @@ public:
 
 
 
+class EditorHelpBit : public Panel {
 
+	OBJ_TYPE( EditorHelpBit, Panel);
+
+	RichTextLabel *rich_text;
+	void _go_to_help(String p_what);
+	void _meta_clicked(String p_what);
+
+
+protected:
+
+	static void _bind_methods();
+	void _notification(int p_what);
+public:
+
+	void set_text(const String& p_text);
+	EditorHelpBit();
+};
 
 #endif // EDITOR_HELP_H

@@ -66,7 +66,7 @@ public:
 	static double floor(double p_x);
 	static double ceil(double p_x);
 	static double ease(double p_x, double p_c);
-	static int decimals(double p_step);
+	static int step_decimals(double p_step);
 	static double stepify(double p_value,double p_step);
 	static void seed(uint32_t x=0);
 	static void randomize();
@@ -91,25 +91,25 @@ public:
 
 	static uint32_t rand();
 	static double randf();
-	
+
 	static double round(double p_val);
 
 	static double random(double from, double to);
-	
+
 
 	static _FORCE_INLINE_ real_t abs(real_t g) {
 
-#ifdef REAL_T_IS_DOUBLE	
-	
-		return absd(g);		
+#ifdef REAL_T_IS_DOUBLE
+
+		return absd(g);
 #else
 
-		return absf(g);		
+		return absf(g);
 #endif
 	}
 
 	static _FORCE_INLINE_ float absf(float g) {
-		
+
 		union {
 			float f;
 			uint32_t i;
@@ -174,7 +174,7 @@ public:
 	static double pow(double x, double y);
 	static double log(double x);
 	static double exp(double x);
-	
+
 };
 
 

@@ -67,89 +67,94 @@ void Range::Shared::emit_changed(const char *p_what) {
 
 
 void Range::set_val(double p_val) {
-	
+
 	if(_rounded_values){
 		p_val = Math::round(p_val);
 	}
-	
+
 	if (p_val>shared->max-shared->page)
 		p_val=shared->max-shared->page;
-	
+
 	if (p_val<shared->min)
 		p_val=shared->min;
 
-	//avoid to set -0
-	if (p_val == 0)
-		p_val = 0;
-
 	if (shared->val==p_val)
 		return;
-	
+
 	shared->val=p_val;
-	
+
 	shared->emit_value_changed();
 }
 void Range::set_min(double p_min) {
-	
+
 	shared->min=p_min;
 	set_val(shared->val);
-	
+
 	shared->emit_changed("range/min");
 }
 void Range::set_max(double p_max) {
-	
+
 	shared->max=p_max;
 	set_val(shared->val);
-		
+
 	shared->emit_changed("range/max");
 
 }
 void Range::set_step(double p_step) {
-	
+
 	shared->step=p_step;
 	shared->emit_changed("range/step");
 
 }
 void Range::set_page(double p_page) {
-	
+
 	shared->page=p_page;
 	set_val(shared->val);
-			
+
 	shared->emit_changed("range/page");
 }
 
 double Range::get_val() const {
-	
+
 	return shared->val;
 }
 double Range::get_min() const {
-	
+
 	return shared->min;
 }
 double Range::get_max() const {
-	
+
 	return shared->max;
 }
 double Range::get_step() const {
-	
+
 	return shared->step;
 }
 double Range::get_page() const {
-	
+
 	return shared->page;
 }
 
 void Range::set_unit_value(double p_value) {
+
+	double v;
+
 	if (shared->exp_unit_value && get_min()>0) {
 
 		double exp_min = Math::log(get_min())/Math::log(2);
 		double exp_max = Math::log(get_max())/Math::log(2);
-		double v = Math::pow(2,exp_min+(exp_max-exp_min)*p_value);
-
-		set_val( v );
+		v = Math::pow(2,exp_min+(exp_max-exp_min)*p_value);
 	} else {
-		set_val( (get_max() - get_min()) * p_value + get_min() );
+
+		double percent = (get_max() - get_min()) * p_value;
+		if (get_step() > 0) {
+			double steps = round(percent / get_step());
+			v = steps * get_step() + get_min();
+		} else {
+			v = percent + get_min();
+		}
 	}
+	set_val( v );
 }
 double Range::get_unit_value() const {
 

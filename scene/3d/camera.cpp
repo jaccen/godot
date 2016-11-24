@@ -56,8 +56,8 @@ void Camera::_update_camera_mode() {
 		} break;
 		case PROJECTION_ORTHOGONAL: {
 			set_orthogonal(size,near,far);
-		} break;	
-	
+		} break;
+
 	}
 
 }
@@ -81,7 +81,7 @@ bool Camera::_set(const StringName& p_name, const Variant& p_value) {
 	else if (p_name=="near")
 		near=p_value;
 	else if (p_name=="far")
-		far=p_value;														
+		far=p_value;
 	else if (p_name=="keep_aspect")
 		set_keep_aspect_mode(KeepAspect(int(p_value)));
 	else if (p_name=="vaspect")
@@ -102,7 +102,7 @@ bool Camera::_set(const StringName& p_name, const Variant& p_value) {
 		set_environment(p_value);
 	} else
 		return false;
-		
+
 	_update_camera_mode();
 	if (changed_all)
 		_change_notify();
@@ -147,21 +147,21 @@ bool Camera::_get(const StringName& p_name,Variant &r_ret) const {
 void Camera::_get_property_list( List<PropertyInfo> *p_list) const {
 
 	p_list->push_back( PropertyInfo( Variant::INT, "projection", PROPERTY_HINT_ENUM, "Perspective,Orthogonal") );
-	
+
 	switch(mode) {
-	
+
 		case PROJECTION_PERSPECTIVE: {
-		
+
 			p_list->push_back( PropertyInfo( Variant::REAL, "fov" , PROPERTY_HINT_RANGE, "1,179,0.1",PROPERTY_USAGE_NOEDITOR) );
 			if (keep_aspect==KEEP_WIDTH)
 				p_list->push_back( PropertyInfo( Variant::REAL, "fovx" , PROPERTY_HINT_RANGE, "1,179,0.1",PROPERTY_USAGE_EDITOR) );
 			else
 				p_list->push_back( PropertyInfo( Variant::REAL, "fovy" , PROPERTY_HINT_RANGE, "1,179,0.1",PROPERTY_USAGE_EDITOR) );
 
-			
+
 		} break;
 		case PROJECTION_ORTHOGONAL: {
-		
+
 			p_list->push_back( PropertyInfo( Variant::REAL, "size" , PROPERTY_HINT_RANGE, "1,16384,0.01",PROPERTY_USAGE_NOEDITOR ) );
 			if (keep_aspect==KEEP_WIDTH)
 				p_list->push_back( PropertyInfo( Variant::REAL, "sizex" , PROPERTY_HINT_RANGE, "0.1,16384,0.01",PROPERTY_USAGE_EDITOR) );
@@ -169,9 +169,9 @@ void Camera::_get_property_list( List<PropertyInfo> *p_list) const {
 				p_list->push_back( PropertyInfo( Variant::REAL, "sizey" , PROPERTY_HINT_RANGE, "0.1,16384,0.01",PROPERTY_USAGE_EDITOR) );
 
 		} break;
-	
+
 	}
-	
+
 	p_list->push_back( PropertyInfo( Variant::REAL, "near" , PROPERTY_HINT_EXP_RANGE, "0.01,4096.0,0.01") );
 	p_list->push_back( PropertyInfo( Variant::REAL, "far" , PROPERTY_HINT_EXP_RANGE, "0.01,4096.0,0.01") );
 	p_list->push_back( PropertyInfo( Variant::INT, "keep_aspect",PROPERTY_HINT_ENUM,"Keep Width,Keep Height") );
@@ -209,7 +209,7 @@ void Camera::_update_camera() {
 void Camera::_notification(int p_what) {
 
 	switch(p_what) {
-	
+
 		case NOTIFICATION_ENTER_WORLD: {
 
 
@@ -218,13 +218,13 @@ void Camera::_notification(int p_what) {
 				make_current();
 
 
-		} break;			
+		} break;
 		case NOTIFICATION_TRANSFORM_CHANGED: {
-		
+
 			_request_camera_update();
 		} break;
 		case NOTIFICATION_EXIT_WORLD: {
-		
+
 			if (!get_tree()->is_node_being_edited(this)) {
 				if (is_current()) {
 					clear_current();
@@ -250,7 +250,7 @@ void Camera::_notification(int p_what) {
 			}
 		} break;
 
-	
+
 	}
 
 }
@@ -270,7 +270,7 @@ void Camera::set_perspective(float p_fovy_degrees, float p_z_near, float p_z_far
 	near=p_z_near;
 	far=p_z_far;
 	mode=PROJECTION_PERSPECTIVE;
-	
+
 	VisualServer::get_singleton()->camera_set_perspective(camera,fov,near,far);
 	update_gizmo();
 	force_change=false;
@@ -281,12 +281,12 @@ void Camera::set_orthogonal(float p_size, float p_z_near, float p_z_far) {
 		return;
 
 	size = p_size;
-	
+
 	near=p_z_near;
 	far=p_z_far;
 	mode=PROJECTION_ORTHOGONAL;
 	force_change=false;
-	
+
 	VisualServer::get_singleton()->camera_set_orthogonal(camera,size,near,far);
 	update_gizmo();
 }
@@ -648,12 +648,16 @@ void Camera::_bind_methods() {
 	ObjectTypeDB::bind_method( _MD("get_zfar"),&Camera::get_zfar );
 	ObjectTypeDB::bind_method( _MD("get_znear"),&Camera::get_znear );
 	ObjectTypeDB::bind_method( _MD("get_projection"),&Camera::get_projection );
+	ObjectTypeDB::bind_method( _MD("set_h_offset","ofs"),&Camera::set_h_offset );
+	ObjectTypeDB::bind_method( _MD("get_h_offset"),&Camera::get_h_offset );
+	ObjectTypeDB::bind_method( _MD("set_v_offset","ofs"),&Camera::set_v_offset );
+	ObjectTypeDB::bind_method( _MD("get_v_offset"),&Camera::get_v_offset );
 	ObjectTypeDB::bind_method( _MD("set_visible_layers","mask"),&Camera::set_visible_layers );
 	ObjectTypeDB::bind_method( _MD("get_visible_layers"),&Camera::get_visible_layers );
-	ObjectTypeDB::bind_method(_MD("set_environment","env:Environment"),&Camera::set_environment);
-	ObjectTypeDB::bind_method(_MD("get_environment:Environment"),&Camera::get_environment);
-	ObjectTypeDB::bind_method(_MD("set_keep_aspect_mode","mode"),&Camera::set_keep_aspect_mode);
-	ObjectTypeDB::bind_method(_MD("get_keep_aspect_mode"),&Camera::get_keep_aspect_mode);
+	ObjectTypeDB::bind_method( _MD("set_environment","env:Environment"),&Camera::set_environment );
+	ObjectTypeDB::bind_method( _MD("get_environment:Environment"),&Camera::get_environment );
+	ObjectTypeDB::bind_method( _MD("set_keep_aspect_mode","mode"),&Camera::set_keep_aspect_mode );
+	ObjectTypeDB::bind_method( _MD("get_keep_aspect_mode"),&Camera::get_keep_aspect_mode );
 	//ObjectTypeDB::bind_method( _MD("_camera_make_current"),&Camera::_camera_make_current );
 
 	BIND_CONSTANT( PROJECTION_PERSPECTIVE );
